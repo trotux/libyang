@@ -86,13 +86,13 @@ struct lysc_ext_substmt {
  * TODO
  * @return LY_ENOT if the extension is disabled and should be ignored.
  */
-LY_ERR lys_compile_extension_instance(struct lysc_ctx *ctx, const struct lysp_ext_instance *ext, struct lysc_ext_substmt *substmts);
+LY_ERR lys_compile_extension_instance(struct lysc_ctx *ctx, const struct lysp_ext_instance *ext_p, struct lysc_ext_instance *ext);
 
 /**
  * @brief Free the extension instance's data compiled with ::lys_compile_extension_instance().
  * TODO
  */
-void lysc_extension_instance_free(struct ly_ctx *ctx, struct lysc_ext_substmt *substmts);
+void lysc_extension_instance_substatements_free(struct ly_ctx *ctx, struct lysc_ext_substmt *substmts);
 
 /**
  * @brief Duplicate the compiled extension (definition) structure.
@@ -103,6 +103,9 @@ void lysc_extension_instance_free(struct ly_ctx *ctx, struct lysc_ext_substmt *s
  * @return The duplicated structure to use.
  */
 struct lysc_ext *lysc_ext_dup(struct lysc_ext *orig);
+
+LY_ERR lysc_ext_substmt(const struct lysc_ext_instance *ext, enum ly_stmt substmt,
+        void **instance_p, enum ly_stmt_cardinality *cardinality_p);
 
 /**
  * @brief Update path in the compile context, which is used for logging where the compilation failed.
