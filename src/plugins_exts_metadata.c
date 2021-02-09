@@ -105,6 +105,16 @@ annotation_compile(struct lysc_ctx *cctx, const struct lysp_ext_instance *p_ext,
     c_ext->substmts[ANNOTATION_SUBSTMT_TYPE].cardinality = LY_STMT_CARD_MAND;
     c_ext->substmts[ANNOTATION_SUBSTMT_TYPE].storage = &annotation->type;
 
+    LY_ARRAY_INCREMENT(c_ext->substmts);
+    c_ext->substmts[ANNOTATION_SUBSTMT_DSC].stmt = LY_STMT_DESCRIPTION;
+    c_ext->substmts[ANNOTATION_SUBSTMT_DSC].cardinality = LY_STMT_CARD_OPT;
+    c_ext->substmts[ANNOTATION_SUBSTMT_DSC].storage = &annotation->dsc;
+
+    LY_ARRAY_INCREMENT(c_ext->substmts);
+    c_ext->substmts[ANNOTATION_SUBSTMT_REF].stmt = LY_STMT_REFERENCE;
+    c_ext->substmts[ANNOTATION_SUBSTMT_REF].cardinality = LY_STMT_CARD_OPT;
+    c_ext->substmts[ANNOTATION_SUBSTMT_REF].storage = &annotation->ref;
+
     LY_CHECK_RET(lys_compile_extension_instance(cctx, p_ext, c_ext));
 
     return LY_SUCCESS;

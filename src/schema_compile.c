@@ -701,8 +701,8 @@ lys_compile_extension_instance(struct lysc_ctx *ctx, const struct lysp_ext_insta
             stmt_counter++;
             if (ext->substmts[u].storage) {
                 switch (stmt->kw) {
-                case LY_STMT_CONTAINER:
                 case LY_STMT_CHOICE:
+                case LY_STMT_CONTAINER:
                 case LY_STMT_USES:
                     r = lysp_stmt_parse(ctx, stmt, &parsed, NULL);
                     LY_CHECK_ERR_GOTO(r, ret = r, cleanup);
@@ -712,6 +712,27 @@ lys_compile_extension_instance(struct lysc_ctx *ctx, const struct lysp_ext_insta
                     lysp_node_free(ctx->ctx, parsed);
                     LY_CHECK_ERR_GOTO(r, ret = r, cleanup);
                     break;
+                case LY_STMT_DESCRIPTION:
+                case LY_STMT_REFERENCE:
+                case LY_STMT_UNITS: {
+                    const char **str_p;
+
+                    if (ext->substmts[u].cardinality < LY_STMT_CARD_SOME) {
+                        /* single item */
+                        if (*((const char **)ext->substmts[u].storage)) {
+                            LOGVAL(ctx->ctx, LY_VCODE_DUPSTMT, stmt->stmt);
+                            goto cleanup;
+                        }
+                        str_p = (const char **)ext->substmts[u].storage;
+                    } else {
+                        /* sized array */
+                        const char ***strings_array = (const char ***)ext->substmts[u].storage;
+                        LY_ARRAY_NEW_GOTO(ctx->ctx, *strings_array, str_p, ret, cleanup);
+                    }
+                    r = lydict_insert(ctx->ctx, stmt->arg, 0, str_p);
+                    LY_CHECK_ERR_GOTO(r, ret = r, cleanup);
+                    break;
+                }
                 case LY_STMT_IF_FEATURE: {
                     ly_bool enabled;
 
@@ -755,25 +776,6 @@ lys_compile_extension_instance(struct lysc_ctx *ctx, const struct lysp_ext_insta
                             units && !*units ? units : NULL, NULL);
                     lysp_type_free(ctx->ctx, parsed);
                     free(parsed);
-                    LY_CHECK_ERR_GOTO(r, ret = r, cleanup);
-                    break;
-                }
-                case LY_STMT_UNITS: {
-                    const char **units;
-
-                    if (ext->substmts[u].cardinality < LY_STMT_CARD_SOME) {
-                        /* single item */
-                        if (*((const char **)ext->substmts[u].storage)) {
-                            LOGVAL(ctx->ctx, LY_VCODE_DUPSTMT, stmt->stmt);
-                            goto cleanup;
-                        }
-                        units = (const char **)ext->substmts[u].storage;
-                    } else {
-                        /* sized array */
-                        const char ***units_array = (const char ***)ext->substmts[u].storage;
-                        LY_ARRAY_NEW_GOTO(ctx->ctx, *units_array, units, ret, cleanup);
-                    }
-                    r = lydict_insert(ctx->ctx, stmt->arg, 0, units);
                     LY_CHECK_ERR_GOTO(r, ret = r, cleanup);
                     break;
                 }

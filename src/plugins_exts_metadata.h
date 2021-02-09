@@ -25,6 +25,8 @@ extern "C" {
 #define ANNOTATION_SUBSTMT_UNITS   1 /**< index for the LY_STMT_UNITS substatement in annotation's ::lysc_ext_instance.substmts */
 #define ANNOTATION_SUBSTMT_STATUS  2 /**< index for the LY_STMT_STATUS substatement in annotation's ::lysc_ext_instance.substmts */
 #define ANNOTATION_SUBSTMT_TYPE    3 /**< index for the LY_STMT_TYPE substatement in annotation's ::lysc_ext_instance.substmts */
+#define ANNOTATION_SUBSTMT_DSC     4 /**< index for the LY_STMT_DSC substatement in annotation's ::lysc_ext_instance.substmts */
+#define ANNOTATION_SUBSTMT_REF     5 /**< index for the LY_STMT_REF substatement in annotation's ::lysc_ext_instance.substmts */
 
 #ifdef __cplusplus
 }
