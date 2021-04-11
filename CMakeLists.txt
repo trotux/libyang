@@ -5,10 +5,28 @@ if(NOT FORCE_INSRC_BUILD AND ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message(FATAL_ERROR "In-source build is not allowed. Please make a standalone build directory and run CMake from there. You may need to remove CMakeCache.txt.")
 endif()
 
-project(libyang C)
+# Version of the project
+# Generic version of not only the library. Major version is reserved for really big changes of the project,
+# minor version changes with added functionality (new tool, functionality of the tool or library, ...) and
+# micro version is changed with a set of small changes or bugfixes anywhere in the project.
+set(LIBYANG_MAJOR_VERSION 1)
+set(LIBYANG_MINOR_VERSION 0)
+set(LIBYANG_MICRO_VERSION 225)
+set(LIBYANG_VERSION ${LIBYANG_MAJOR_VERSION}.${LIBYANG_MINOR_VERSION}.${LIBYANG_MICRO_VERSION})
 
 # include custom Modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
+
+if (CMAKE_VERSION VERSION_LESS 3.0)
+    PROJECT(yang C)
+    set(PROJECT_VERSION_MAJOR "${LIBYANG_MAJOR_VERSION}")
+    set(PROJECT_VERSION_MINOR "${LIBYANG_MINOR_VERSION}")
+    set(PROJECT_VERSION_PATCH "${LIBYANG_MICRO_VERSION}")
+    set(PROJECT_VERSION "${LIBYANG_VERSION}")
+else()
+    cmake_policy(SET CMP0048 NEW)
+    PROJECT(yang VERSION "${LIBYANG_VERSION}" LANGUAGES C)
+endif()
 
 include(GNUInstallDirs)
 include(CheckSymbolExists)
@@ -18,15 +36,6 @@ set(LIBYANG_DESCRIPTION "libyang is YANG data modelling language parser and tool
 
 # Correct RPATH usage on OS X
 set(CMAKE_MACOSX_RPATH TRUE)
-
-# Version of the project
-# Generic version of not only the library. Major version is reserved for really big changes of the project,
-# minor version changes with added functionality (new tool, functionality of the tool or library, ...) and
-# micro version is changed with a set of small changes or bugfixes anywhere in the project.
-set(LIBYANG_MAJOR_VERSION 1)
-set(LIBYANG_MINOR_VERSION 0)
-set(LIBYANG_MICRO_VERSION 225)
-set(LIBYANG_VERSION ${LIBYANG_MAJOR_VERSION}.${LIBYANG_MINOR_VERSION}.${LIBYANG_MICRO_VERSION})
 
 # Version of the library
 # Major version is changed with every backward non-compatible API/ABI change in libyang, minor version changes
@@ -227,6 +236,8 @@ else()
     set_target_properties(yangobj PROPERTIES COMPILE_FLAGS "-fvisibility=hidden")
 endif()
 
+add_library(yang::yang ALIAS yang)
+set_target_properties(yang PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 set_target_properties(yang PROPERTIES VERSION ${LIBYANG_SOVERSION_FULL} SOVERSION ${LIBYANG_SOVERSION})
 
 # link math
@@ -243,7 +254,13 @@ find_package(PCRE REQUIRED)
 include_directories(${PCRE_INCLUDE_DIRS})
 target_link_libraries(yang ${PCRE_LIBRARIES})
 
-install(TARGETS yang DESTINATION ${CMAKE_INSTALL_LIBDIR})
+# installation
+install(
+    TARGETS yang
+    EXPORT yang
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${headers} ${PROJECT_BINARY_DIR}/src/libyang.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libyang)
 
 # generate pkg-config file
@@ -263,6 +280,23 @@ if(PKG_CONFIG_FOUND)
         endif()
     endif()
 endif()
+
+set(project_config_in "${CMAKE_CURRENT_LIST_DIR}/CMakeModules/yangConfig.cmake.in")
+set(project_config_out "${CMAKE_CURRENT_BINARY_DIR}/yangConfig.cmake")
+set(config_targets_file "yangConfigTargets.cmake")
+set(version_config_file "${CMAKE_CURRENT_BINARY_DIR}/yangConfigVersion.cmake")
+set(export_dest_dir "${CMAKE_INSTALL_LIBDIR}/cmake/yang")
+
+# ---------------------------------------------------------------------------------------
+# Install CMake config files
+# ---------------------------------------------------------------------------------------
+install(EXPORT yang DESTINATION ${export_dest_dir} NAMESPACE yang:: FILE ${config_targets_file})
+
+include(CMakePackageConfigHelpers)
+configure_file("${project_config_in}" "${project_config_out}" @ONLY)
+
+write_basic_package_version_file("${version_config_file}" COMPATIBILITY SameMajorVersion)
+install(FILES "${project_config_out}" "${version_config_file}" DESTINATION "${export_dest_dir}")
 
 # generate doxygen documentation for libyang API
 find_package(Doxygen)

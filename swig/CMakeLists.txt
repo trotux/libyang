@@ -1,12 +1,23 @@
-project(libyang-cpp)
+if (CMAKE_VERSION VERSION_LESS 3.0)
+    PROJECT(yang-cpp CXX)
+    set(PROJECT_VERSION_MAJOR "${LIBYANG_MAJOR_VERSION}")
+    set(PROJECT_VERSION_MINOR "${LIBYANG_MINOR_VERSION}")
+    set(PROJECT_VERSION_PATCH "${LIBYANG_MICRO_VERSION}")
+    set(PROJECT_VERSION "${LIBYANG_VERSION}")
+else()
+    cmake_policy(SET CMP0048 NEW)
+    PROJECT(yang-cpp VERSION "${LIBYANG_VERSION}" LANGUAGES CXX)
+endif()
 
-set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_PACKAGE "-g -O2 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -Og")
+if(NOT CMAKE_CROSSCOMPILING)
+    set(CMAKE_CXX_FLAGS         "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_PACKAGE "-g -O2 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG   "-g -Og")
 
-# temporary bugfix
-add_compile_options(-std=c++11)
+    # temporary bugfix
+    add_compile_options(-std=c++11)
+endif()
 
 # find SWIG package
 if(GEN_LANGUAGE_BINDINGS)
@@ -69,28 +80,53 @@ ENDFUNCTION(PREPEND)
 PREPEND(abs_libsrc ${CMAKE_SOURCE_DIR} ${libsrc})
 
 if(ENABLE_STATIC)
-    add_library(libyang-cpp STATIC ${LIBYANG_CPP_SOURCES})
+    add_library(yang-cpp STATIC ${LIBYANG_CPP_SOURCES})
 else(ENABLE_STATIC)
-    add_library(libyang-cpp SHARED ${LIBYANG_CPP_SOURCES})
+    add_library(yang-cpp SHARED ${LIBYANG_CPP_SOURCES})
 endif(ENABLE_STATIC)
-SET_TARGET_PROPERTIES(libyang-cpp PROPERTIES
-    VERSION ${LIBYANG_SOVERSION_FULL} SOVERSION ${LIBYANG_SOVERSION} PREFIX "")
+
+add_library(yang-cpp::yang-cpp ALIAS yang-cpp)
+set_target_properties(yang-cpp PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+set_target_properties(yang-cpp PROPERTIES
+    VERSION ${LIBYANG_SOVERSION_FULL} SOVERSION ${LIBYANG_SOVERSION})
 
 # include custom Modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules/")
 
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp/src")
-target_link_libraries(libyang-cpp yang)
+target_link_libraries(yang-cpp yang)
 
 if(PKG_CONFIG_FOUND)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libyang-cpp.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/libyang-cpp.pc" @ONLY)
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libyang-cpp.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 endif()
 
-# install binary
-install(TARGETS libyang-cpp DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES ${LIBYANG_HPP_SOURCES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libyang)
+# installation
+install(
+    TARGETS yang-cpp
+    EXPORT yang-cpp
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES ${LIBYANG_HPP_SOURCES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/libyang-cpp)
+
+set(project_config_in "${CMAKE_CURRENT_LIST_DIR}/CMakeModules/yang-cppConfig.cmake.in")
+set(project_config_out "${CMAKE_CURRENT_BINARY_DIR}/yang-cppConfig.cmake")
+set(config_targets_file "yang-cppConfigTargets.cmake")
+set(version_config_file "${CMAKE_CURRENT_BINARY_DIR}/yang-cppConfigVersion.cmake")
+set(export_dest_dir "${CMAKE_INSTALL_LIBDIR}/cmake/yang-cpp")
+
+# ---------------------------------------------------------------------------------------
+# Install CMake config files
+# ---------------------------------------------------------------------------------------
+install(EXPORT yang-cpp DESTINATION ${export_dest_dir} NAMESPACE yang-cpp:: FILE ${config_targets_file})
+
+include(CMakePackageConfigHelpers)
+configure_file("${project_config_in}" "${project_config_out}" @ONLY)
+
+write_basic_package_version_file("${version_config_file}" COMPATIBILITY SameMajorVersion)
+install(FILES "${project_config_out}" "${version_config_file}" DESTINATION "${export_dest_dir}")
 
 if (GEN_CPP_BINDINGS)
     add_subdirectory(cpp/examples)
